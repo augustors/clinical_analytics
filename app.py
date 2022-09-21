@@ -35,7 +35,48 @@ day_list = [
 check_in_duration = df["Check-In Time"].describe(datetime_is_numeric=True)
 all_departments = df['Department'].unique().tolist()
 
-#FUNÇÕES
+
+
+#=============FUNÇÕES================#
+def description_card():
+    return html.Div(
+        id="description-card", 
+        children = [
+            html.H5("Clinical Analytics"),
+            html.H3("Welcome to the Clinical Analytics Dashboard"),
+            html.Div(
+                id="intro",
+                children="Explore clinic patient volume by time of day, waiting time, and care score."
+            )])
+
+def generate_control_card():
+    return html.Div(
+        id="control-card",
+        children=[
+            html.P("Select Clinic:"),
+            dcc.Dropdown(
+                id="clinic-select",
+                options=[{"labels": i, "value": i} for i in clinic_list],
+                value=clinic_list[0]
+            ),
+            html.P("Select Check-in Time:"),
+            dcc.DatePickerRange(
+                id='date-picker-select',
+                start_date=df["Check-In Time"].min().date(),
+                end_date=df["Check-In Time"].max().date(),
+                min_date_allowed=df["Check-In Time"].min().date(),
+                max_date_allowed=df["Check-In Time"].max().date()
+            ),
+            html.P("Select Admit Source"),
+            dcc.Dropdown(
+                id='admit-select',
+                options=[{"labels": i, "value": i} for i in admit_list],
+                value=admit_list[:],
+                multi=True
+            )
+        ]
+    )
+
 
 
 
