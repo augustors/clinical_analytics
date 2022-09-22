@@ -173,6 +173,73 @@ def generate_table_row(id, style, col1, col2, col3):
     
     pass
 
+def generate_table_row_helper(department):
+    return generate_table_row(
+        department,
+        {},
+        {"id": department + "_department", "children":html.B(department)},
+        {"id": department + "_wait_time", 
+        "children": dcc.Graph(
+            id=department + "_wait_time_graph",
+            style={"height": "100%", "width": "100%"},
+            className = "wait_time_graph",
+            config={
+                "staticPlot": False,
+                "editable": False,
+                "displayModeBar": False
+            },
+            figure={
+                "layout": dict(
+                    xaxis=dict(
+                        showgrid=False,
+                        showline=False,
+                        showticklabels=False,
+                        zeroline=False
+                    ),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+            }
+        )},
+        {"id": department + "_patient_score", 
+        "children": dcc.Graph(
+            id=department + "_score_graph",
+            style={"height": "100%", "width": "100%"},
+            className = "_patient_score_graph",
+            config={
+                "staticPlot": False,
+                "editable": False,
+                "displayModeBar": False
+            },
+            figure={
+                "layout": dict(
+                    xaxis=dict(
+                        showgrid=False,
+                        showline=False,
+                        showticklabels=False,
+                        zeroline=False
+                    ),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+            }
+        )}
+    )
+
+def initialize_table():
+    header = [
+        generate_table_row(
+            "header",
+            {"height":"50px"},
+            {"id": "header_department", "children": html.B("Department")},
+            {"id": "header_wait_time_min", "children": html.B("Wait Time Minutes")},
+            {"id": "header_care_score", "children": html.B("Care Score")},
+        )
+    ]
+
+    rows = [generate_table_row_helper(department) for department in all_departments]
+    header.extend(rows)
+    return header
 
 #=============LAYOUT================#
 app.layout = html.Div(
