@@ -1,3 +1,5 @@
+from select import select
+from tabnanny import check
 from tkinter.font import families
 import dash
 import plotly.express as px
@@ -240,6 +242,73 @@ def initialize_table():
     rows = [generate_table_row_helper(department) for department in all_departments]
     header.extend(rows)
     return header
+
+def create_table_figure(department, filter_df, category, category_xrange, category_yrange):
+    aggregation = {
+        "Wait Time Minute": "mean",
+        "Care Score": "mean",
+        "Days of Wk": "first",
+        "Check-In Time": "first",
+        "Check-In Hour": "first"
+    }
+
+    df_by_department = filter_df[filter_df["Department"] == department].reset_index()
+    grouped = df_by_department.groupby("Encounter Number").agg(aggregation).reset_index()
+    patient_id_list = grouped["Encounter Number"]
+
+    x = grouped[category]
+    y = list(department for _ in range(len(x)))
+
+    f = lambda x_val: dt.strftime(x_val, "%Y-%m-%d")
+    check_in = (
+        grouped["Check-In Time"].apply(f),
+        + " "
+        + grouped["Days of Wk"]
+        + " "
+        + grouped["Check-In Hour"].map(str)
+    )
+
+    text_wait_time = (
+        "Patient # : "
+        + patient_id_list
+        + "<br>Check-In Time: "
+        + check_in
+        + "<br> Wait Time: "
+        + grouped["Wait Time Min"].round(decimals=1).map(str)
+        + " Minutes, Care Score : "
+        + grouped["Care Score"].round(decimals=1).map(str)
+    )
+
+    layout = dict(
+        margin=dict(l=0, r=0, b=0, t=0, pad=0),
+        hovermode="closest",
+        xaxis=dict(
+            showgrid=False,
+            showline=False,
+            showticklabels=False,
+            zeroline=False,
+            range=category_xrange,
+        ),
+        yaxis=dict(
+            showgrid=False, showline=False, showticklabels=False, zeroline=False
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
+
+    trace = dict(
+        x=x,
+        y=y,
+        mode="markers",
+        color="#2c82ff",
+        selected=dict(marker=dict(color="ff6347", opacity=1)),
+        unselected=dict(marker=dict(opacity=0.1)),
+        hoverinfo="text",
+        text=text_wait_time,
+        customdata=patient_id_list
+    )
+    return {"data": [trace], "layout": layout}
+
 
 #=============LAYOUT================#
 app.layout = html.Div(
