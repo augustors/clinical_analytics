@@ -151,7 +151,7 @@ def get_patient_volume_heatmap(start, end, clinic, admit_type):
     return {"data": data, "layout": layout}
 
 def generate_table_row(id, style, col1, col2, col3):
-    return html.Div(id='id',
+    return html.Div(id=id,
         className="row table-row",
         style=style,
         children=[
@@ -172,8 +172,6 @@ def generate_table_row(id, style, col1, col2, col3):
             ),
         ]
     )
-    
-    pass
 
 def generate_table_row_helper(department):
     return generate_table_row(
@@ -192,7 +190,14 @@ def generate_table_row_helper(department):
             },
             figure={
                 "layout": dict(
+                    margin=dict(l=0, r=0, b=0, t=0, pad=0),
                     xaxis=dict(
+                        showgrid=False,
+                        showline=False,
+                        showticklabels=False,
+                        zeroline=False
+                    ),
+                    yaxis=dict(
                         showgrid=False,
                         showline=False,
                         showticklabels=False,
@@ -200,32 +205,41 @@ def generate_table_row_helper(department):
                     ),
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                )
-            }
-        )},
+                    )
+                }
+            )
+        },
         {"id": department + "_patient_score", 
-        "children": dcc.Graph(
-            id=department + "_score_graph",
-            style={"height": "100%", "width": "100%"},
-            className = "_patient_score_graph",
-            config={
-                "staticPlot": False,
-                "editable": False,
-                "displayModeBar": False
-            },
-            figure={
-                "layout": dict(
-                    xaxis=dict(
-                        showgrid=False,
-                        showline=False,
-                        showticklabels=False,
-                        zeroline=False
-                    ),
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                )
-            }
-        )}
+            "children": dcc.Graph(
+                id=department + "_score_graph",
+                style={"height": "100%", "width": "100%"},
+                className = "_patient_score_graph",
+                config={
+                    "staticPlot": False,
+                    "editable": False,
+                    "displayModeBar": False
+                },
+                figure={
+                    "layout": dict(
+                        margin=dict(l=0, r=0, b=0, t=0, pad=0),
+                        xaxis=dict(
+                            showgrid=False,
+                            showline=False,
+                            showticklabels=False,
+                            zeroline=False
+                        ),
+                        yaxis=dict(
+                            showgrid=False,
+                            showline=False,
+                            showticklabels=False,
+                            zeroline=False
+                        ),
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                    )
+                },
+            ),
+        },
     )
 
 def initialize_table():
@@ -241,7 +255,8 @@ def initialize_table():
 
     rows = [generate_table_row_helper(department) for department in all_departments]
     header.extend(rows)
-    return header
+    empty_table = header
+    return empty_table
 
 def create_table_figure(department, filter_df, category, category_xrange, category_yrange):
     aggregation = {
@@ -309,15 +324,96 @@ def create_table_figure(department, filter_df, category, category_xrange, catego
     )
     return {"data": [trace], "layout": layout}
 
+def generate_patient_table(figure_list, departments, wait_time_xrange, score_xrange):
+    header = [
+        generate_table_row(
+            "header",
+            {"height": "50px"},
+            {"id": "header_department", "children": html.B("Department")},
+            {"id": "header_wait_time_min", "children": html.B("Wait Time Minutes")},
+            {"id": "header_care_score", "children": html.B("Care Score")},
+        )
+    ]
+    rows = [generate_table_row_helper(department) for department in departments]
 
+    empty_departments = [item for item in all_departments if item not in departments]
+
+    empty_rows = [generate_table_row_helper(department) for department in empty_departments]
+
+    for ind, department in enumerate(departments):
+        rows[ind].children[1].children.figure = figure_list[ind]
+        rows[ind].children[2].children.figure = figure_list[ind + len(departments)]
+    
+    for row in empty_rows[1:]:
+        row.style = {"display": "none"}
+
+    empty_rows[0].children[0].children = html.B(style={"visibility": "hidden"})
+
+    empty_rows[0].children[1].children = html.B(style={"visibility": "hidden"})
+
+    empty_rows[0].children[1].children.figure["layout"].update(
+        dict(margin=dict(t=-70, b=50, l=0, pad=0))
+    )
+
+    empty_rows[0].children[2].children.figure["layout"].update(
+        dict(margin=dict(t=-70, b=50, l=0, pad=0))
+    )
+
+    empty_rows[0].children[1].children.config["staticPlot"] = True
+    empty_rows[0].children[1].children.figure["layout"]["xaxis"].update(
+        dict(
+            showline=True,
+            showticklabels=True,
+            tick0=0,
+            dtick=20,
+            range=wait_time_xrange
+        )
+    )
+
+    empty_rows[0].children[2].children.figure["layout"]["xaxis"].update(
+        dict(
+            showline=True,
+            showticklabels=True,
+            tick0=0,
+            dtick=20,
+            range=wait_time_xrange
+        )
+    )
+
+    header.extend(rows)
+    header.extend(empty_rows)
+
+    return header
+    
 #=============LAYOUT================#
-app.layout = html.Div(
-    id='app-container',
+app.layout = html.Div(id='app-container',
     children=[
     html.Div(       
         id='left-column',
         className='four columns',
         children=[description_card(), generate_control_card()]
+    ),
+    html.Div(
+        id='right-column',
+        className= "eight columns",
+        children=[
+            html.Div(
+                id="patient_volume_card",
+                children=[
+                    html.B("Patient Volume"),
+                    html.Hr(),
+                    dcc.Graph(id="patient_volume_hm")
+                ]
+            ),
+            html.Div(
+                id="wait_time_card",
+                children=[
+                    html.B("Patients Wait Time and Satisfactory Scores"),
+                    html.Hr(),
+                    html.Div(id="wait_time_table", children=initialize_table())
+                ]
+            )
+        ]
     )
 ])
 
