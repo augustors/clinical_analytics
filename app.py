@@ -77,13 +77,16 @@ def generate_control_card():
                 min_date_allowed=df["Check-In Time"].min().date(),
                 max_date_allowed=df["Check-In Time"].max().date()
             ),
+            html.Br(),
+            html.Br(),
             html.P("Select Admit Source"),
             dcc.Dropdown(
                 id='admit-select',
                 options=[{"label": i, "value": i} for i in admit_list],
                 value=admit_list[:],
                 multi=True
-            )
+            ),
+            html.Br()
         ]
     )
 
@@ -101,10 +104,10 @@ def get_patient_volume_heatmap(start, end, clinic, admit_type):
     annotations = []
 
     for ind_y, day in enumerate(y_axis):
-        filter_day = filter_df[["Days of Wk"] == day]
+        filter_day = filter_df[filter_df["Days of Wk"] == day]
         for ind_x, x_val in enumerate(x_axis):
             sum_of_records = filter_day[filter_day["Check-In Hour"] == x_val]["Number of Records"].sum()
-            z=[ind_y, ind_x] = sum_of_records
+            z[ind_y][ind_x] = sum_of_records
 
             ann_dict = dict(
                 showarrow = False,
@@ -416,6 +419,24 @@ app.layout = html.Div(id='app-container',
         ]
     )
 ])
+
+#========== CALLBACKS
+
+@app.callback(
+    Output("patient_volume_hm", "figure"),
+    [
+        Input("date-picker-select", "start_date"),
+        Input("date-picker-select", "end_date"),
+        Input("clinic-select", "value"),
+        Input("admit-select", "value")
+    ]
+)
+def update_heatmap(start, end, clinic, admit_type):
+    start = start + " 00:00:00"
+    end = end + " 00:00:00"
+    return get_patient_volume_heatmap(start,end,clinic,admit_type)
+
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
