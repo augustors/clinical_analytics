@@ -263,7 +263,7 @@ def initialize_table():
 
 def create_table_figure(department, filter_df, category, category_xrange, category_yrange):
     aggregation = {
-        "Wait Time Minute": "mean",
+        "Wait Time Min": "mean",
         "Care Score": "mean",
         "Days of Wk": "first",
         "Check-In Time": "first",
@@ -275,11 +275,11 @@ def create_table_figure(department, filter_df, category, category_xrange, catego
     patient_id_list = grouped["Encounter Number"]
 
     x = grouped[category]
-    y = list(department for _ in range(len(x)))
+    y = list(department for i in range(len(x)))
 
     f = lambda x_val: dt.strftime(x_val, "%Y-%m-%d")
     check_in = (
-        grouped["Check-In Time"].apply(f),
+        grouped["Check-In Time"].apply(f)
         + " "
         + grouped["Days of Wk"]
         + " "
@@ -352,7 +352,6 @@ def generate_patient_table(figure_list, departments, wait_time_xrange, score_xra
 
     empty_rows[0].children[0].children = html.B(style={"visibility": "hidden"})
 
-    empty_rows[0].children[1].children = html.B(style={"visibility": "hidden"})
 
     empty_rows[0].children[1].children.figure["layout"].update(
         dict(margin=dict(t=-70, b=50, l=0, pad=0))
@@ -436,7 +435,43 @@ def update_heatmap(start, end, clinic, admit_type):
     end = end + " 00:00:00"
     return get_patient_volume_heatmap(start,end,clinic,admit_type)
 
+@app.callback(
+    Output("wait_time_table", "children"),
+    [
+        Input("date-picker-select", "start_date"),
+        Input("date-picker-select", "end_date"),
+        Input("clinic-select", "value"),
+        Input("admit-select", "value")
+    ]
+)
+def update_table(start, end, clinic, admit_type):
+    start = start + " 00:00:00"
+    end = end + " 00:00:00"
 
+    filtered_df = df[(df["Clinic Name"] == clinic) & (df["Admit Source"].isin(admit_type))]
+    filtered_df = filtered_df.sort_values("Check-In Time").set_index("Check-In Time")[start:end]
+    departments = filtered_df["Department"].unique()
+
+    wait_time_xrange = [
+        filtered_df["Wait Time Min"].min() - 2,
+        filtered_df["Wait Time Min"].max() + 2,
+    ]    
+
+    score_xrange = [
+        filtered_df["Care Score"].min() - 0.5,
+        filtered_df["Care Score"].max() + 0.5,
+    ]    
+    
+    figure_list = []
+    for department in departments:
+        department_wait_time_figure = create_table_figure(department, filtered_df, "Wait Time Min", wait_time_xrange, "")
+        figure_list.append(department_wait_time_figure)
+    
+    for department in departments:
+        department_wait_time_figure = create_table_figure(department, filtered_df, "Care Score", score_xrange, "")
+        figure_list.append(department_wait_time_figure)    
+
+    return generate_patient_table(figure_list, departments, wait_time_xrange, score_xrange)
 
 if __name__ == '__main__':
     app.run_server(debug=True)
