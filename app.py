@@ -1,18 +1,15 @@
-from select import select
-from tabnanny import check
-from tkinter.font import families
+
 import dash
-import plotly.express as px
-import pandas as pd
 from dash import Input, Output, html, dcc
-import pathlib
+import dash_bootstrap_components as dbc
 import numpy as np
+import pandas as pd
 import datetime
 from datetime import datetime as dt
-import dash_bootstrap_components as dbc
+import pathlib
 
 
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}])
 
 #=========== PRÉ PROCESSAMENTO ==========#
 BASE_PATH = pathlib.Path(__file__).parent.resolve()
@@ -73,7 +70,7 @@ def generate_control_card():
             dcc.DatePickerRange(
                 id='date-picker-select',
                 start_date=df["Check-In Time"].min().date(),
-                end_date=df["Check-In Time"].max().date(),
+                end_date=dt(2014,1,15),
                 min_date_allowed=df["Check-In Time"].min().date(),
                 max_date_allowed=df["Check-In Time"].max().date()
             ),
@@ -158,20 +155,23 @@ def generate_table_row(id, style, col1, col2, col3):
         className="row table-row",
         style=style,
         children=[
-            html.Div(id=col1["id"],
-            style={"display": "table", "height": "100%"},
-            className="two columns row-department",
-            children=col1["children"]
+            html.Div(
+                id=col1["id"],
+                style={"display": "table", "height": "100%"},
+                className="two columns row-department",
+                children=col1["children"]
             ),
-            html.Div(id=col2["id"],
-            style={"text-align": "table", "height": "100%"},
-            className="five columns row-department",
-            children=col2["children"]
+            html.Div(
+                id=col2["id"],
+                style={"text-align": "table", "height": "100%"},
+                className="five columns row-department",
+                children=col2["children"]
             ),
-            html.Div(id=col3["id"],
-            style={"text-align": "table", "height": "100%"},
-            className="five columns row-department",
-            children=col3["children"]
+            html.Div(
+                id=col3["id"],
+                style={"text-align": "table", "height": "100%"},
+                className="five columns row-department",
+                children=col3["children"]
             ),
         ]
     )
@@ -181,42 +181,44 @@ def generate_table_row_helper(department):
         department,
         {},
         {"id": department + "_department", "children":html.B(department)},
-        {"id": department + "_wait_time", 
-        "children": dcc.Graph(
-            id=department + "_wait_time_graph",
-            style={"height": "100%", "width": "100%"},
-            className = "wait_time_graph",
-            config={
-                "staticPlot": False,
-                "editable": False,
-                "displayModeBar": False
-            },
-            figure={
-                "layout": dict(
-                    margin=dict(l=0, r=0, b=0, t=0, pad=0),
-                    xaxis=dict(
-                        showgrid=False,
-                        showline=False,
-                        showticklabels=False,
-                        zeroline=False
-                    ),
-                    yaxis=dict(
-                        showgrid=False,
-                        showline=False,
-                        showticklabels=False,
-                        zeroline=False
-                    ),
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
+        {
+            "id": department + "wait_time", 
+            "children": dcc.Graph(
+                id=department + "_wait_time_graph",
+                style={"height": "100%", "width": "100%"},
+                className = "wait_time_graph",
+                config={
+                    "staticPlot": False,
+                    "editable": False,
+                    "displayModeBar": False
+                },
+                figure={
+                    "layout": dict(
+                        margin=dict(l=0, r=0, b=0, t=0, pad=0),
+                        xaxis=dict(
+                            showgrid=False,
+                            showline=False,
+                            showticklabels=False,
+                            zeroline=False
+                        ),
+                        yaxis=dict(
+                            showgrid=False,
+                            showline=False,
+                            showticklabels=False,
+                            zeroline=False
+                        ),
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        plot_bgcolor="rgba(0,0,0,0)",
                     )
                 }
             )
         },
-        {"id": department + "_patient_score", 
+        {
+            "id": department + "_patient_score", 
             "children": dcc.Graph(
                 id=department + "_score_graph",
                 style={"height": "100%", "width": "100%"},
-                className = "_patient_score_graph",
+                className = "patient_score_graph",
                 config={
                     "staticPlot": False,
                     "editable": False,
@@ -261,7 +263,7 @@ def initialize_table():
     empty_table = header
     return empty_table
 
-def create_table_figure(department, filter_df, category, category_xrange, category_yrange):
+def create_table_figure(department, filter_df, category, category_xrange, selected_index):
     aggregation = {
         "Wait Time Min": "mean",
         "Care Score": "mean",
@@ -321,6 +323,7 @@ def create_table_figure(department, filter_df, category, category_xrange, catego
         color="#2c82ff",
         selected=dict(marker=dict(color="ff6347", opacity=1)),
         unselected=dict(marker=dict(opacity=0.1)),
+        selected_points=selected_index,
         hoverinfo="text",
         text=text_wait_time,
         customdata=patient_id_list
@@ -378,7 +381,7 @@ def generate_patient_table(figure_list, departments, wait_time_xrange, score_xra
             showticklabels=True,
             tick0=0,
             dtick=20,
-            range=wait_time_xrange
+            range=score_xrange
         )
     )
 
@@ -390,34 +393,40 @@ def generate_patient_table(figure_list, departments, wait_time_xrange, score_xra
 #=============LAYOUT================#
 app.layout = html.Div(id='app-container',
     children=[
-    html.Div(       
-        id='left-column',
-        className='four columns',
-        children=[description_card(), generate_control_card()]
-    ),
-    html.Div(
-        id='right-column',
-        className= "eight columns",
-        children=[
-            html.Div(
-                id="patient_volume_card",
-                children=[
-                    html.B("Patient Volume"),
-                    html.Hr(),
-                    dcc.Graph(id="patient_volume_hm")
-                ]
-            ),
-            html.Div(
-                id="wait_time_card",
-                children=[
-                    html.B("Patients Wait Time and Satisfactory Scores"),
-                    html.Hr(),
-                    html.Div(id="wait_time_table", children=initialize_table())
-                ]
-            )
-        ]
-    )
-])
+        # Left column
+        html.Div(
+            id="left-column",
+            className="four columns",
+            children=[description_card(), generate_control_card()]
+
+        ),
+        # Right column
+        html.Div(
+            id="right-column",
+            className="eight columns",
+            children=[
+                # Patient Volume Heatmap
+                html.Div(
+                    id="patient_volume_card",
+                    children=[
+                        html.B("Patient Volume"),
+                        html.Hr(),
+                        dcc.Graph(id="patient_volume_hm"),
+                    ],
+                ),
+                # Patient Wait time by Department
+                html.Div(
+                    id="wait_time_card",
+                    children=[
+                        html.B("Patient Wait Time and Satisfactory Scores"),
+                        html.Hr(),
+                        html.Div(id="wait_time_table", children=initialize_table()),
+                    ],
+                ),
+            ],
+        ),
+    ],
+)
 
 #========== CALLBACKS
 
